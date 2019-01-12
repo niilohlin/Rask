@@ -1,9 +1,9 @@
 
-struct Parser<T> {
-    let parse: (inout String) throws -> T
+public struct Parser<T> {
+    public let parse: (inout String) throws -> T
 }
 
-extension Parser where T == Character {
+public extension Parser where T == Character {
     struct WrongCharacterError: Error {
     }
     static func character(_ c: Character) -> Parser<Character> {
@@ -15,4 +15,8 @@ extension Parser where T == Character {
             return c
         }
     }
+}
+
+public extension Parser where T == String {
+    static func 
 }
