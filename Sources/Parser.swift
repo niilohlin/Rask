@@ -40,7 +40,7 @@ public extension Parser {
 }
 
 public extension Parser {
-    static func or<T>(_ first: Parser<T>, second: Parser<T>) -> Parser<T> {
+    static func or<T>(_ first: Parser<T>, _ second: Parser<T>) -> Parser<T> {
         return Parser<T> { input in
             do {
                 return try first.parse(&input)
