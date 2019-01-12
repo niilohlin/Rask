@@ -1,0 +1,25 @@
+{
+  "object": {
+    "pins": [
+      {
+        "package": "FileCheck",
+        "repositoryURL": "https://github.com/llvm-swift/FileCheck.git",
+        "state": {
+          "branch": null,
+          "revision": "89b8480055f9adf8ce2f9ad5e2fac7ac1076242e",
+          "version": "0.0.8"
+        }
+      },
+      {
+        "package": "LLVM",
+        "repositoryURL": "https://github.com/llvm-swift/LLVMSwift.git",
+        "state": {
+          "branch": null,
+          "revision": "fca99feb766d66587a0a952d123fd1bf2082e35f",
+          "version": "0.4.0"
+        }
+      }
+    ]
+  },
+  "version": 1
+}
