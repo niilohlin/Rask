@@ -49,6 +49,43 @@ public extension Parser {
             }
         }
     }
+
+    func or(_ other: Parser<T>) -> Parser<T> {
+        return Parser<T>.or(self, other)
+    }
+
+    func skip<G>(_ parser: Parser<G>) -> Parser<T> {
+        return Parser { input in
+            let value = try self.parse(&input)
+            _ = try parser.parse(&input)
+            return value
+        }
+    }
+
+    func optional() -> Parser<T?> {
+        return Parser<T?> { input in
+            return try? self.parse(&input)
+        }
+    }
+
+    func many() -> Parser<[T]> {
+        return Parser<[T]> { input in
+            var result = [T]()
+            while true {
+                do {
+                    let parsed = try self.parse(&input)
+                    result.append(parsed)
+                } catch {
+                    break
+                }
+            }
+            return result
+        }
+    }
+
+    func lexeme() -> Parser<T> {
+        return skip(Parser<Character>.character(Character(" ")).or(Parser<Character>.character(Character("\n"))).many())
+    }
 }
 
 public extension Parser where T == Character {

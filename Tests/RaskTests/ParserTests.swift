@@ -47,29 +47,19 @@ final class ParserTests: XCTestCase {
         _ = try? abParser.parse(&inputString)
 
         XCTAssertEqual(inputString, "apa")
+    }
+
+    func testSkip() throws {
+        let charParser = Parser<Character>.character(Character("a")).skip(Parser<Character>.character(Character("p")))
+
+        var inputString = "apa"
+
+        let parsed = try charParser.parse(&inputString)
+        XCTAssertEqual(parsed, Character("a"))
+        XCTAssertEqual(inputString, "a")
 
     }
 
-    func testParseArithmetic() throws {
-        indirect enum Expr {
-            case number(Int)
-            case add(Expr, Expr)
-            case mul(Expr, Expr)
-        }
-
-        let expression = "(1+2)*2+1"
-        let intParser = Parser<Expr>.or(
-                Parser<Character>.character(Character("1")),
-                Parser<Character>.character(Character("2"))
-        ).map { char in
-            Expr.number(Int(String(char))!)
-        }
-
-
-//        let parenParser = Parser<Expr> { input in
-//
-//        }
-    }
 }
 
 extension Character {
