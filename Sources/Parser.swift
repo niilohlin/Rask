@@ -1,6 +1,9 @@
 
 public struct Parser<T> {
     public let parse: (inout String) throws -> T
+    public init(_ parse: @escaping (inout String) throws -> T) {
+        self.parse = parse
+    }
 }
 
 
@@ -21,10 +24,6 @@ public extension Parser {
             return try transform(result)
         }
     }
-
-//    func apply<G>(_ other: Parser<(T) -> G>) -> Parser<G> {
-//
-//    }
 
     func flatMap<G>(_ transform: @escaping (T) throws -> Parser<G>) rethrows -> Parser<G> {
         return Parser<G> { input in
@@ -80,6 +79,22 @@ public extension Parser {
                 }
             }
             return result
+        }
+    }
+
+    struct NotOneOfError: Error {
+        let failingChar: Character
+        let expected: String
+    }
+    
+    func one(of string: String) -> Parser<Character> {
+        return Parser<Character> { input in
+            let firstChar = Character(String(input.prefix(1)))
+            guard string.contains(firstChar) else {
+                throw NotOneOfError(failingChar: firstChar, expected: string)
+            }
+            input = String(input.dropFirst())
+            return firstChar
         }
     }
 

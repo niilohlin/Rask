@@ -30,48 +30,10 @@ extension Expr: Equatable {
 }
 
 final class ParseArithmeticTests: XCTestCase {
-
-    var expressionParser: Parser<Expr>!
-
-    override func setUp() {
-        super.setUp()
-
-        let intParser = Parser<Expr>.or(
-                Parser<Character>.character(Character("1")),
-                Parser<Character>.character(Character("2"))
-        ).map { char in
-            Expr.number(Int(String(char))!)
-        }.lexeme()
+    let examples: [(String, Expr)] = [
+        ("1", .number(1)),
+        ("23", .number(23))
+    ]
 
 
-        expressionParser = intParser
-    }
-
-    func testParseInt() throws {
-        let result = try expressionParser.parse(input: "1")
-        XCTAssertEqual(result, Expr.number(1))
-    }
-
-    func testParseIntWithTrailingWhiteSpace() throws {
-        var input = "1  "
-        let result = try expressionParser.parse(&input)
-        XCTAssertEqual(result, Expr.number(1))
-        XCTAssertEqual(input, "")
-    }
-
-    func testParserMultiplication() throws {
-        let result = try expressionParser.parse(input: "1 * 2")
-        XCTAssertEqual(result, Expr.mul(Expr.number(1), Expr.number(2)))
-    }
-
-    func testParseArithmetic() throws {
-        let expression = "(1 + 2) * 2 + 1"
-
-
-
-
-//        let parenParser = Parser<Expr> { input in
-//
-//        }
-    }
 }
