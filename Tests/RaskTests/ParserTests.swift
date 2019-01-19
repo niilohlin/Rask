@@ -57,9 +57,26 @@ final class ParserTests: XCTestCase {
         let parsed = try charParser.parse(&inputString)
         XCTAssertEqual(parsed, Character("a"))
         XCTAssertEqual(inputString, "a")
-
     }
 
+    func testString() throws {
+        XCTAssertEqual(try Parser<String>.string("test").parse(input: "test"), "test")
+    }
+
+    func testManyNonEmpty() throws {
+        let characters = Parser<Character>.one(of: "abc").manyNonEmpty().map { String($0) }
+        var input = "aaabbcd"
+        let result = try characters.parse(&input)
+        XCTAssertEqual(result, "aaabbc")
+        XCTAssertEqual(input, "d")
+    }
+
+    func testManyNonEmpty_failing() throws {
+        let characters = Parser<Character>.one(of: "abc").manyNonEmpty().map { String($0) }
+        var input = "derp"
+        XCTAssertThrowsError(try characters.parse(&input))
+        XCTAssertEqual(input, "derp")
+    }
 }
 
 extension Character {

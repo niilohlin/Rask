@@ -6,6 +6,12 @@ public struct Parser<T> {
     }
 }
 
+public extension Parser {
+    struct UnexpectedToken<Expected>: Error {
+        let expected: Expected
+        let actual: Expected
+    }
+}
 
 public extension Parser {
     struct FailingParser: Error {
@@ -82,12 +88,30 @@ public extension Parser {
         }
     }
 
+    func manyNonEmpty() -> Parser<[T]> {
+        return Parser<[T]> { input in
+            var result = [T]()
+            while true {
+                do {
+                    let parsed = try self.parse(&input)
+                    result.append(parsed)
+                } catch {
+                    if result.isEmpty {
+                        throw error
+                    }
+                    break
+                }
+            }
+            return result
+        }
+    }
+
     struct NotOneOfError: Error {
         let failingChar: Character
         let expected: String
     }
-    
-    func one(of string: String) -> Parser<Character> {
+
+    static func one(of string: String) -> Parser<Character> {
         return Parser<Character> { input in
             let firstChar = Character(String(input.prefix(1)))
             guard string.contains(firstChar) else {
@@ -95,6 +119,15 @@ public extension Parser {
             }
             input = String(input.dropFirst())
             return firstChar
+        }.checkEOF()
+    }
+
+    func checkEOF() -> Parser<T> {
+        return Parser { input in
+            guard !input.isEmpty else {
+                throw UnexpectedToken(expected: "not eof", actual: "")
+            }
+            return try self.parse(&input)
         }
     }
 
@@ -113,6 +146,22 @@ public extension Parser where T == Character {
             }
             input = String(input.dropFirst())
             return c
-        }
+        }.checkEOF()
+    }
+
+    static func digit() -> Parser<Character> {
+        return Parser<Character>.one(of: "0123456789")
+    }
+}
+
+public extension Parser where T == String {
+    static func string(_ string: String) -> Parser<String> {
+        return Parser<String> { input in
+            guard input.hasPrefix(string) else {
+                throw UnexpectedToken(expected: string, actual: input)
+            }
+            input = String(input.dropFirst(string.count))
+            return string
+        }.checkEOF()
     }
 }
