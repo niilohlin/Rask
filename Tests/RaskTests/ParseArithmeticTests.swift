@@ -53,7 +53,7 @@ extension Parser {
 
     static func expressionAdd() -> Parser<Expr> {
         return term().flatMap { lhs in
-            Parser<Character>.character(Character("+")).lexeme().flatMap { _ in
+            Parser<Character>.character(Character("+")).lexeme().then {
                 parseExpression().map { rhs in
                     Expr.add(lhs, rhs)
                 }
@@ -62,7 +62,7 @@ extension Parser {
     }
 
     static func parseParens() -> Parser<Expr> {
-        return Parser<Character>.character(Character("(")).lexeme().flatMap { _ in
+        return Parser<Character>.character(Character("(")).lexeme().then {
             Parser<Expr>.parseExpression().flatMap { number in
                 Parser<Character>.character(Character(")")).lexeme().map { _ in
                     Expr.parentheses(number)

@@ -54,6 +54,12 @@ public extension Parser {
             return result
         }
     }
+
+    func then<G>(_ transform: @escaping () throws -> Parser<G>) rethrows -> Parser<G> {
+        return try flatMap { _ in
+            try transform()
+        }
+    }
 }
 
 public extension Parser {
