@@ -72,19 +72,9 @@ extension Parser {
     }
 
     static func parseExpression() -> Parser<Expr> {
-        func addSuffix(to lhs: Expr) -> Parser<Expr> {
-            return Parser<Character>.character(Character("+")).lexeme().flatMap { _ in
-                term().flatMap { rhs in
-                    maybeAddSuffix(to: .add(lhs, rhs))
-                }
-            }
-        }
-        func maybeAddSuffix(to expr: Expr) -> Parser<Expr> {
-            return addSuffix(to: expr).or(Parser<Expr>.always(expr))
-        }
-        return term().flatMap { expr in
-            maybeAddSuffix(to: expr)
-        }
+        return term().chainLeft(operator: Parser<Character>.character(Character("+")).lexeme().map { _ in
+            Expr.add
+        })
     }
 }
 

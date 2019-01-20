@@ -8,8 +8,9 @@ public struct Parser<T> {
 
 protocol UnexpectedToken: Error {
     associatedtype Expected
+    associatedtype Actual
     var expected: Expected { get }
-    var actual: Expected { get }
+    var actual: Actual { get }
 }
 public extension Parser {
     struct AnyUnexpectedToken<ExpectedToken>: UnexpectedToken {
@@ -126,16 +127,30 @@ public extension Parser {
         }
     }
 
-    struct NotOneOfError: Error {
-        let failingChar: Character
+    func chainLeft(`operator`: Parser<(T, T) -> T>) -> Parser<T> {
+        func chain(lhs: T) -> Parser<T> {
+            return `operator`.flatMap { makeOperator -> Parser<T> in
+                self.flatMap { rhs -> Parser<T> in
+                    let result = makeOperator(lhs, rhs)
+                    return chain(lhs: result)
+                }
+            }.or(Parser<T>.always(lhs))
+        }
+        return self.flatMap { lhs in
+            chain(lhs: lhs)
+        }
+    }
+
+    struct NotOneOfError: UnexpectedToken {
         let expected: String
+        let actual: Character
     }
 
     static func one(of string: String) -> Parser<Character> {
         return Parser<Character> { input in
             let firstChar = Character(String(input.prefix(1)))
             guard string.contains(firstChar) else {
-                throw NotOneOfError(failingChar: firstChar, expected: string)
+                throw NotOneOfError(expected: string, actual: firstChar)
             }
             input = String(input.dropFirst())
             return firstChar
