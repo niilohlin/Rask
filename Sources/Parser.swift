@@ -6,10 +6,15 @@ public struct Parser<T> {
     }
 }
 
+protocol UnexpectedToken: Error {
+    associatedtype Expected
+    var expected: Expected { get }
+    var actual: Expected { get }
+}
 public extension Parser {
-    struct UnexpectedToken<Expected>: Error {
-        let expected: Expected
-        let actual: Expected
+    struct AnyUnexpectedToken<ExpectedToken>: UnexpectedToken {
+        let expected: ExpectedToken
+        let actual: ExpectedToken
     }
 }
 
@@ -64,6 +69,15 @@ public extension Parser {
             let value = try self.parse(&input)
             _ = try parser.parse(&input)
             return value
+        }
+    }
+
+    func backtrack() -> Parser<T> {
+        return Parser { input in
+            var backup = input
+            let result = try self.parse(&backup)
+            input = backup
+            return result
         }
     }
 
@@ -125,7 +139,7 @@ public extension Parser {
     func checkEOF() -> Parser<T> {
         return Parser { input in
             guard !input.isEmpty else {
-                throw UnexpectedToken(expected: "not eof", actual: "")
+                throw AnyUnexpectedToken(expected: "not eof", actual: "")
             }
             return try self.parse(&input)
         }
@@ -137,12 +151,14 @@ public extension Parser {
 }
 
 public extension Parser where T == Character {
-    struct WrongCharacterError: Error {
+    struct WrongCharacterError: UnexpectedToken {
+        let expected: Character
+        var actual: Character
     }
     static func character(_ c: Character) -> Parser<Character> {
         return Parser<Character> { input in
             guard String(input.prefix(1)) == String(c) else {
-                throw WrongCharacterError()
+                throw WrongCharacterError(expected: c, actual: input.first!)
             }
             input = String(input.dropFirst())
             return c
@@ -158,7 +174,7 @@ public extension Parser where T == String {
     static func string(_ string: String) -> Parser<String> {
         return Parser<String> { input in
             guard input.hasPrefix(string) else {
-                throw UnexpectedToken(expected: string, actual: input)
+                throw AnyUnexpectedToken(expected: string, actual: input)
             }
             input = String(input.dropFirst(string.count))
             return string

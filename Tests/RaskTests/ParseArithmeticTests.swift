@@ -12,6 +12,7 @@ indirect enum Expr {
     case number(Int)
     case add(Expr, Expr)
     case mul(Expr, Expr)
+    case parentheses(Expr)
 }
 
 extension Expr: Equatable {
@@ -23,14 +24,12 @@ extension Expr: Equatable {
             return lExpr == rExpr
         case (.mul(let lExpr), .mul(let rExpr)):
             return lExpr == rExpr
+        case (.parentheses(let lExpr), .parentheses(let rExpr)):
+            return lExpr == rExpr
         default:
             return false
         }
     }
-}
-
-struct Parentheses: Equatable {
-    let integer: Int
 }
 
 // lex
@@ -46,18 +45,34 @@ extension Parser {
         return Parser.number().lexeme().map(Expr.number)
     }
 
-    static func parseExpression() -> Parser<Expr> {
-        return Parser.expressionNumber()
+    static func term() -> Parser<Expr> {
+        return Parser<Expr> { input in
+            try expressionNumber().or(parseParens()).or(Parser<Expr>.expressionAdd()).parse(&input)
+        }
     }
 
-    static func parseParens() -> Parser<Parentheses> {
-        return Parser<Character>.character(Character("(")).flatMap { _ in
-            Parser<Int>.number().flatMap { number in
-                Parser<Character>.character(Character(")")).map { _ in
-                    Parentheses(integer: number)
+    static func expressionAdd() -> Parser<Expr> {
+        return term().flatMap { lhs in
+            Parser<Character>.character(Character("+")).lexeme().flatMap { _ in
+                parseExpression().map { rhs in
+                    Expr.add(lhs, rhs)
                 }
             }
         }
+    }
+
+    static func parseParens() -> Parser<Expr> {
+        return Parser<Character>.character(Character("(")).lexeme().flatMap { _ in
+            Parser<Expr>.parseExpression().flatMap { number in
+                Parser<Character>.character(Character(")")).lexeme().map { _ in
+                    Expr.parentheses(number)
+                }
+            }
+        }
+    }
+
+    static func parseExpression() -> Parser<Expr> {
+        return expressionAdd().or(Parser<Expr>.term())
     }
 }
 
@@ -65,23 +80,45 @@ final class ParseArithmeticTests: XCTestCase {
 
     func runExample<T: Equatable>(examples: [(String, T)], parser: Parser<T>, file: StaticString = #file, line: UInt = #line) throws {
         for (input, expected) in examples {
-            XCTAssertEqual(try parser.parse(input: input), expected, file: file, line: line)
+            var input = input
+            XCTAssertEqual(try parser.parse(&input), expected, file: file, line: line)
+            XCTAssert(input.isEmpty, "input was not consumed. rest: \(input)", file: file, line: line)
         }
+    }
+
+    func testParentheses() throws {
+        let examples: [(String, Expr)] = [
+            ("(1)",    .parentheses(.number(1))),
+            ("(23)",   .parentheses(.number(23))),
+            ("( 5)",   .parentheses(.number(5))),
+            ("(3 )",   .parentheses(.number(3))),
+            ("( 0 ) ", .parentheses(.number(0))),
+            ("((0)) ", .parentheses(.parentheses(.number(0)))),
+        ]
+        try runExample(examples: examples, parser: Parser<Expr>.parseParens())
+    }
+
+    func testAdd() throws {
+        let examples: [(String, Expr)] = [
+            ("1+5", .add(.number(1), .number(5))),
+            ("1 +5 ", .add(.number(1), .number(5))),
+            ("1+ 5 ", .add(.number(1), .number(5))),
+            ("1 + 5", .add(.number(1), .number(5))),
+        ]
+        try runExample(examples: examples, parser: Parser<Expr>.expressionAdd())
     }
 
     func testParser() throws {
         let examples: [(String, Expr)] = [
             ("1", .number(1)),
-            ("23", .number(23))
+            ("23", .number(23)),
+            ("5 + 3", .add(.number(5), .number(3))),
+            ("(5 )", .parentheses(.number(5))),
+            ("((0)) ", .parentheses(.parentheses(.number(0)))),
+            ("(0 + 5) ", .parentheses(.add(.number(0), .number(5)))),
+            ("1 + 2 + 3", .add(.number(1), .add(.number(2), .number(3))))
         ]
         try runExample(examples: examples, parser: Parser<Expr>.parseExpression())
     }
 
-    func testParentheses() throws {
-        let examples: [(String, Parentheses)] = [
-            ("(1)", Parentheses(integer: 1)),
-            ("(23)", Parentheses(integer: 23))
-        ]
-        try runExample(examples: examples, parser: Parser<Parentheses>.parseParens())
-    }
 }
