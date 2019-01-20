@@ -72,7 +72,19 @@ extension Parser {
     }
 
     static func parseExpression() -> Parser<Expr> {
-        return expressionAdd().or(Parser<Expr>.term())
+        func addSuffix(to lhs: Expr) -> Parser<Expr> {
+            return Parser<Character>.character(Character("+")).lexeme().flatMap { _ in
+                term().flatMap { rhs in
+                    maybeAddSuffix(to: .add(lhs, rhs))
+                }
+            }
+        }
+        func maybeAddSuffix(to expr: Expr) -> Parser<Expr> {
+            return addSuffix(to: expr).or(Parser<Expr>.always(expr))
+        }
+        return term().flatMap { expr in
+            maybeAddSuffix(to: expr)
+        }
     }
 }
 
@@ -116,7 +128,7 @@ final class ParseArithmeticTests: XCTestCase {
             ("(5 )", .parentheses(.number(5))),
             ("((0)) ", .parentheses(.parentheses(.number(0)))),
             ("(0 + 5) ", .parentheses(.add(.number(0), .number(5)))),
-            ("1 + 2 + 3", .add(.number(1), .add(.number(2), .number(3))))
+            ("1 + 2 + 3", .add(.add(.number(1), .number(2)), .number(3)))
         ]
         try runExample(examples: examples, parser: Parser<Expr>.parseExpression())
     }

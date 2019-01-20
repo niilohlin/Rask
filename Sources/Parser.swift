@@ -26,6 +26,12 @@ public extension Parser {
             throw FailingParser()
         }
     }
+
+    static func always<T>(_ value: T) -> Parser<T> {
+        return Parser<T> { _ in
+            return value
+        }
+    }
 }
 
 public extension Parser {
