@@ -5,22 +5,24 @@ final class ParserTests: XCTestCase {
     func testParseChar() throws {
         let charParser = Parser<Character>.character(Character("a"))
 
-        var inputString = "apa"
+        let inputString = "apa"
+        var index = inputString.startIndex
 
-        let parsed = try charParser.parse(&inputString)
+        let parsed = try charParser.parse(inputString, &index)
         XCTAssertEqual(parsed, Character("a"))
-        XCTAssertEqual(inputString, "pa")
+        XCTAssertEqual(index, inputString.index(inputString.startIndex, offsetBy: 1))
     }
 
     func testMap() throws {
         let charParser = Parser<Character>.character(Character("a"))
         let singleStringParser = charParser.map(String.init)
 
-        var inputString = "apa"
+        let inputString = "apa"
+        var index = inputString.startIndex
 
-        let parsed = try singleStringParser.parse(&inputString)
+        let parsed = try singleStringParser.parse(inputString, &index)
         XCTAssertEqual(parsed, "a")
-        XCTAssertEqual(inputString, "pa")
+        XCTAssertEqual(index, inputString.index(inputString.startIndex, offsetBy: 1))
     }
 
     func testFlatMap() throws {
@@ -30,10 +32,11 @@ final class ParserTests: XCTestCase {
         }
 
         var inputString = "aba"
+        var index = inputString.startIndex
 
-        let parsed = try abParser.parse(&inputString)
+        let parsed = try abParser.parse(inputString, &index)
         XCTAssertEqual(parsed, Character("b"))
-        XCTAssertEqual(inputString, "a")
+        XCTAssertEqual(index, inputString.index(inputString.startIndex, offsetBy: 2))
     }
 
     func testFailingFlatMap() throws {
@@ -43,20 +46,23 @@ final class ParserTests: XCTestCase {
         }
 
         var inputString = "apa"
+        var index = inputString.startIndex
 
-        _ = try? abParser.parse(&inputString)
+        _ = try? abParser.parse(inputString, &index)
 
         XCTAssertEqual(inputString, "apa")
+        XCTAssertEqual(index, inputString.startIndex)
     }
 
     func testSkip() throws {
         let charParser = Parser<Character>.character(Character("a")).skip(Parser<Character>.character(Character("p")))
 
         var inputString = "apa"
+        var index = inputString.startIndex
 
-        let parsed = try charParser.parse(&inputString)
+        let parsed = try charParser.parse(inputString, &index)
         XCTAssertEqual(parsed, Character("a"))
-        XCTAssertEqual(inputString, "a")
+        XCTAssertEqual(index, inputString.index(inputString.startIndex, offsetBy: 2))
     }
 
     func testString() throws {
@@ -65,17 +71,19 @@ final class ParserTests: XCTestCase {
 
     func testManyNonEmpty() throws {
         let characters = Parser<Character>.one(of: "abc").manyNonEmpty().map { String($0) }
-        var input = "aaabbcd"
-        let result = try characters.parse(&input)
+        let input = "aaabbcd"
+        var index = input.startIndex
+        let result = try characters.parse(input, &index)
         XCTAssertEqual(result, "aaabbc")
-        XCTAssertEqual(input, "d")
+        XCTAssertEqual(index, input.index(input.startIndex, offsetBy: 6))
     }
 
     func testManyNonEmpty_failing() throws {
         let characters = Parser<Character>.one(of: "abc").manyNonEmpty().map { String($0) }
-        var input = "derp"
-        XCTAssertThrowsError(try characters.parse(&input))
-        XCTAssertEqual(input, "derp")
+        let input = "derp"
+        var index = input.startIndex
+        XCTAssertThrowsError(try characters.parse(input, &index))
+        XCTAssertEqual(index, input.startIndex)
     }
 }
 

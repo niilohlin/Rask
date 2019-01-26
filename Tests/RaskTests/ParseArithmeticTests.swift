@@ -3,8 +3,9 @@ import Rask
 
 extension Parser {
     func parse(input: String) throws -> T {
-        var input = input
-        return try self.parse(&input)
+        let input = input
+        var index = input.startIndex
+        return try self.parse(input, &index)
     }
 }
 
@@ -46,8 +47,8 @@ extension Parser {
     }
 
     static func term() -> Parser<Expr> {
-        return Parser<Expr> { input in
-            try expressionNumber().or(parseParens()).or(Parser<Expr>.expressionAdd()).parse(&input)
+        return Parser<Expr> { input, index in
+            try expressionNumber().or(parseParens()).or(Parser<Expr>.expressionAdd()).parse(input, &index)
         }
     }
 
@@ -82,9 +83,11 @@ final class ParseArithmeticTests: XCTestCase {
 
     func runExample<T: Equatable>(examples: [(String, T)], parser: Parser<T>, file: StaticString = #file, line: UInt = #line) throws {
         for (input, expected) in examples {
-            var input = input
-            XCTAssertEqual(try parser.parse(&input), expected, file: file, line: line)
-            XCTAssert(input.isEmpty, "input was not consumed. rest: \(input)", file: file, line: line)
+            let input = input
+            var index = input.startIndex
+
+            XCTAssertEqual(try parser.parse(input, &index), expected, file: file, line: line)
+            XCTAssertEqual(index, input.endIndex, "input was not consumed. rest: \(input)", file: file, line: line)
         }
     }
 
