@@ -6,6 +6,28 @@ public struct Parser<T> {
     }
 }
 
+public protocol Matchable {
+    var parser: Parser<Void> { get }
+}
+
+extension String: Matchable {
+    public var parser: Parser<Void> {
+        return Parser<String>.string(self).toVoid()
+    }
+}
+
+extension Character: Matchable {
+    public var parser: Parser<Void> {
+        return Parser<Character>.character(self).toVoid()
+    }
+}
+
+extension Parser: Matchable where T == Void {
+    public var parser: Parser<Void> {
+        return self
+    }
+}
+
 protocol UnexpectedToken: Error {
     associatedtype Expected
     associatedtype Actual
@@ -53,6 +75,10 @@ public extension Parser {
             index = temp
             return result
         }
+    }
+
+    func toVoid() -> Parser<Void> {
+        return map { _ in () }
     }
 
     func then<G>(_ transform: @escaping () throws -> Parser<G>) rethrows -> Parser<G> {
@@ -163,6 +189,19 @@ public extension Parser {
         }.checkEOF()
     }
 
+    func separated(by separator: Matchable) -> Parser<[T]> {
+        return separatedNonEmpty(by: separator).or(Parser.always([]))
+    }
+
+    func separatedNonEmpty(by separator: Matchable) -> Parser<[T]> {
+        let parser = separator.parser
+        return flatMap { firstMatch in
+            (parser.then { self }).many().map { rest in
+                [firstMatch] + rest
+            }
+        }
+    }
+
     func checkEOF() -> Parser<T> {
         return Parser { input, index in
 
@@ -183,6 +222,7 @@ public extension Parser where T == Character {
         let expected: Character
         var actual: Character
     }
+
     static func character(_ c: Character) -> Parser<Character> {
         return Parser<Character> { input, index in
 

@@ -31,7 +31,7 @@ final class ParserTests: XCTestCase {
             Parser<Character>.character(character.nextInAlphabet())
         }
 
-        var inputString = "aba"
+        let inputString = "aba"
         var index = inputString.startIndex
 
         let parsed = try abParser.parse(inputString, &index)
@@ -45,7 +45,7 @@ final class ParserTests: XCTestCase {
             Parser<Character>.character(character.nextInAlphabet())
         }
 
-        var inputString = "apa"
+        let inputString = "apa"
         var index = inputString.startIndex
 
         _ = try? abParser.parse(inputString, &index)
@@ -57,7 +57,7 @@ final class ParserTests: XCTestCase {
     func testSkip() throws {
         let charParser = Parser<Character>.character(Character("a")).skip(Parser<Character>.character(Character("p")))
 
-        var inputString = "apa"
+        let inputString = "apa"
         var index = inputString.startIndex
 
         let parsed = try charParser.parse(inputString, &index)
@@ -84,6 +84,15 @@ final class ParserTests: XCTestCase {
         var index = input.startIndex
         XCTAssertThrowsError(try characters.parse(input, &index))
         XCTAssertEqual(index, input.startIndex)
+    }
+
+    func testSeparatedBy() throws {
+        let characters = Parser<Character>.character(Character("a")).separated(by: " ")
+        let input = "a a a a"
+        var index = input.startIndex
+        let result = try characters.parse(input, &index)
+        XCTAssertEqual(result, [Character("a"), Character("a"), Character("a"), Character("a")])
+        XCTAssertEqual(index, input.endIndex)
     }
 }
 
