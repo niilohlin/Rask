@@ -75,12 +75,12 @@ final class ParseArithmeticTests: XCTestCase {
 
     func testParentheses() throws {
         let examples: [(String, Expr)] = [
-            ("(1)",    .parentheses(.number(1))),
-            ("(23)",   .parentheses(.number(23))),
-            ("( 5)",   .parentheses(.number(5))),
-            ("(3 )",   .parentheses(.number(3))),
+            ("(1)", .parentheses(.number(1))),
+            ("(23)", .parentheses(.number(23))),
+            ("( 5)", .parentheses(.number(5))),
+            ("(3 )", .parentheses(.number(3))),
             ("( 0 ) ", .parentheses(.number(0))),
-            ("((0)) ", .parentheses(.parentheses(.number(0)))),
+            ("((0)) ", .parentheses(.parentheses(.number(0))))
         ]
         try runExample(examples: examples, parser: Parser<Expr>.parseParens())
     }
@@ -90,7 +90,7 @@ final class ParseArithmeticTests: XCTestCase {
             ("1+5", .add(.number(1), .number(5))),
             ("1 +5 ", .add(.number(1), .number(5))),
             ("1+ 5 ", .add(.number(1), .number(5))),
-            ("1 + 5", .add(.number(1), .number(5))),
+            ("1 + 5", .add(.number(1), .number(5)))
         ]
         try runExample(examples: examples, parser: Parser<Expr>.expressionAdd())
     }

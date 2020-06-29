@@ -13,6 +13,16 @@ final class ParserTests: XCTestCase {
         XCTAssertEqual(index, inputString.index(inputString.startIndex, offsetBy: 1))
     }
 
+    func testFailingParser() {
+        let charParser = Parser<Character>.character(Character("a"))
+
+        let inputString = "pa"
+        var index = inputString.startIndex
+
+        XCTAssertThrowsError(try charParser.parse(inputString, &index))
+        XCTAssertEqual(index, inputString.startIndex)
+    }
+
     func testMap() throws {
         let charParser = Parser<Character>.character(Character("a"))
         let singleStringParser = charParser.map(String.init)

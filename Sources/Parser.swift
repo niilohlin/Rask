@@ -1,5 +1,5 @@
-
 public struct Parser<T> {
+    public let name: String = ""
     public let parse: (String, inout String.Index) throws -> T
     public init(_ parse: @escaping (String, inout String.Index) throws -> T) {
         self.parse = parse
@@ -89,12 +89,20 @@ public extension Parser {
 }
 
 public extension Parser {
+    struct OrError: UnexpectedToken {
+        var expected: String
+        var actual: String
+    }
     static func or<T>(_ first: Parser<T>, _ second: Parser<T>) -> Parser<T> {
         return Parser<T> { input, index in
             do {
                 return try first.parse(input, &index)
             } catch {
-                return try second.parse(input, &index)
+                do {
+                    return try second.parse(input, &index)
+                } catch {
+                    throw OrError(expected: "\(first.name) or \(second.name)", actual: "\(input[index])")
+                }
             }
         }
     }
@@ -227,7 +235,7 @@ public extension Parser where T == Character {
         return Parser<Character> { input, index in
 
             guard input[index] == c else {
-                throw WrongCharacterError(expected: c, actual: input.first!)
+                throw WrongCharacterError(expected: c, actual: input[index])
             }
             index = input.index(after: index)
             return c
