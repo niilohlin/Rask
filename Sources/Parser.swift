@@ -1,29 +1,39 @@
-public struct Parser<T> {
-    public let name: String = ""
-    public let parse: (String, inout String.Index) throws -> T
+
+public protocol Parser {
+    associatedtype Output
+    func parse(_ input: String, _ index: inout String.Index) throws -> Output
+}
+
+public struct AnyParser<T>: Parser {
+    typealias Output = T
+    private let parseClosure: (String, inout String.Index) throws -> T
     public init(_ parse: @escaping (String, inout String.Index) throws -> T) {
-        self.parse = parse
+        self.parseClosure = parse
+    }
+
+    func parse(_ str: String, _ index: inout String.Index) throws -> T {
+        try parseClosure(str, &index)
     }
 }
 
 public protocol Matchable {
-    var parser: Parser<Void> { get }
+    var parser: AnyParser<Void> { get }
 }
 
 extension String: Matchable {
-    public var parser: Parser<Void> {
-        Parser<String>.string(self).toVoid()
+    public var parser: AnyParser<Void> {
+        AnyParser<String>.string(self).toVoid()
     }
 }
 
 extension Character: Matchable {
-    public var parser: Parser<Void> {
-        Parser<Character>.character(self).toVoid()
+    public var parser: AnyParser<Void> {
+        AnyParser<Character>.character(self).toVoid()
     }
 }
 
-extension Parser: Matchable where T == Void {
-    public var parser: Parser<Void> {
+extension AnyParser: Matchable where T == Void {
+    public var parser: AnyParser<Void> {
         self
     }
 }
@@ -34,67 +44,67 @@ protocol UnexpectedToken: Error {
     var expected: Expected { get }
     var actual: Actual { get }
 }
-public extension Parser {
-    struct AnyUnexpectedToken<ExpectedToken>: UnexpectedToken {
-        let expected: ExpectedToken
-        let actual: ExpectedToken
-    }
+public extension AnyParser {
+}
+struct AnyUnexpectedToken<ExpectedToken>: UnexpectedToken {
+    let expected: ExpectedToken
+    let actual: ExpectedToken
 }
 
-public extension Parser {
-    struct FailingParser: Error {
+public extension AnyParser {
+    struct FailingAnyParser: Error {
     }
-    static func failingParser<T>(_ type: T.Type) -> Parser<T> {
-        Parser<T> { _, _ in
-            throw FailingParser()
+    static func failingAnyParser<T>(_ type: T.Type) -> AnyParser<T> {
+        AnyParser<T> { _, _ in
+            throw FailingAnyParser()
         }
     }
 
-    static func always<T>(_ value: T) -> Parser<T> {
-        Parser<T> { _, _ in
+    static func always<T>(_ value: T) -> AnyParser<T> {
+        AnyParser<T> { _, _ in
             value
         }
     }
 }
 
-public extension Parser {
-    func map<G>(_ transform: @escaping (T) throws -> G) rethrows -> Parser<G> {
-        Parser<G> { input, index in
+public extension AnyParser {
+    func map<G>(_ transform: @escaping (T) throws -> G) rethrows -> AnyParser<G> {
+        AnyParser<G> { input, index in
             let result = try self.parse(input, &index)
             return try transform(result)
         }
     }
 
-    func flatMap<G>(_ transform: @escaping (T) throws -> Parser<G>) rethrows -> Parser<G> {
-        Parser<G> { input, index in
+    func flatMap<G>(_ transform: @escaping (T) throws -> AnyParser<G>) rethrows -> AnyParser<G> {
+        AnyParser<G> { input, index in
             var temp = index
 
             let firstResult = try self.parse(input, &temp)
-            let newParser = try transform(firstResult)
-            let result = try newParser.parse(input, &temp)
+            let newAnyParser = try transform(firstResult)
+            let result = try newAnyParser.parse(input, &temp)
             index = temp
             return result
         }
     }
 
-    func toVoid() -> Parser<Void> {
+    func toVoid() -> AnyParser<Void> {
         map { _ in () }
     }
 
-    func then<G>(_ transform: @escaping () throws -> Parser<G>) rethrows -> Parser<G> {
+    func then<G>(_ transform: @escaping () throws -> AnyParser<G>) rethrows -> AnyParser<G> {
         try flatMap { _ in
             try transform()
         }
     }
 }
 
-public extension Parser {
+public extension AnyParser {
     struct OrError: UnexpectedToken {
         var expected: String
         var actual: String
     }
-    static func or<T>(_ first: Parser<T>, _ second: Parser<T>) -> Parser<T> {
-        Parser<T> { input, index in
+    static func or<T>(_ first: AnyParser<T>, _ second: AnyParser<T>) -> AnyParser<T> {
+        AnyParser<T> { input, index in
             let oldIndex = index
             var firstError: Error?
             do {
@@ -117,20 +127,20 @@ public extension Parser {
         }
     }
 
-    func or(_ other: Parser<T>) -> Parser<T> {
-        Parser<T>.or(self, other)
+    func or(_ other: AnyParser<T>) -> AnyParser<T> {
+        AnyParser<T>.or(self, other)
     }
 
-    func skip<G>(_ parser: Parser<G>) -> Parser<T> {
-        Parser { input, index in
+    func skip<G>(_ parser: AnyParser<G>) -> AnyParser<T> {
+        AnyParser { input, index in
             let value = try self.parse(input, &index)
             _ = try parser.parse(input, &index)
             return value
         }
     }
 
-    func backtrack() -> Parser<T> {
-        Parser { input, index in
+    func backtrack() -> AnyParser<T> {
+        AnyParser { input, index in
             var backup = index
             let result = try self.parse(input, &backup)
             index = backup
@@ -138,14 +148,14 @@ public extension Parser {
         }
     }
 
-    func optional() -> Parser<T?> {
-        Parser<T?> { input, index in
+    func optional() -> AnyParser<T?> {
+        AnyParser<T?> { input, index in
             return try? self.parse(input, &index)
         }
     }
 
-    func many() -> Parser<[T]> {
-        Parser<[T]> { input, index in
+    func many() -> AnyParser<[T]> {
+        AnyParser<[T]> { input, index in
             var result = [T]()
             while true {
                 do {
@@ -159,8 +169,8 @@ public extension Parser {
         }
     }
 
-    func manyNonEmpty() -> Parser<[T]> {
-        Parser<[T]> { input, index in
+    func manyNonEmpty() -> AnyParser<[T]> {
+        AnyParser<[T]> { input, index in
             var result = [T]()
             while true {
                 do {
@@ -177,14 +187,14 @@ public extension Parser {
         }
     }
 
-    func chainLeft(`operator`: Parser<(T, T) -> T>) -> Parser<T> {
-        func chain(lhs: T) -> Parser<T> {
-            `operator`.flatMap { makeOperator -> Parser<T> in
-                self.flatMap { rhs -> Parser<T> in
+    func chainLeft(`operator`: AnyParser<(T, T) -> T>) -> AnyParser<T> {
+        func chain(lhs: T) -> AnyParser<T> {
+            `operator`.flatMap { makeOperator -> AnyParser<T> in
+                self.flatMap { rhs -> AnyParser<T> in
                     let result = makeOperator(lhs, rhs)
                     return chain(lhs: result)
                 }
-            }.or(Parser<T>.always(lhs))
+            }.or(AnyParser<T>.always(lhs))
         }
         return self.flatMap { lhs in
             chain(lhs: lhs)
@@ -196,8 +206,8 @@ public extension Parser {
         let actual: Character
     }
 
-    static func one(of string: String) -> Parser<Character> {
-        Parser<Character> { input, index in
+    static func one(of string: String) -> AnyParser<Character> {
+        AnyParser<Character> { input, index in
             let firstChar = input[index]
             guard string.contains(firstChar) else {
                 throw NotOneOfError(expected: string, actual: firstChar)
@@ -207,11 +217,11 @@ public extension Parser {
         }.checkEOF()
     }
 
-    func separated(by separator: Matchable) -> Parser<[T]> {
-        separatedNonEmpty(by: separator).or(Parser.always([]))
+    func separated(by separator: Matchable) -> AnyParser<[T]> {
+        separatedNonEmpty(by: separator).or(AnyParser.always([]))
     }
 
-    func separatedNonEmpty(by separator: Matchable) -> Parser<[T]> {
+    func separatedNonEmpty(by separator: Matchable) -> AnyParser<[T]> {
         let parser = separator.parser
         return flatMap { firstMatch in
             (parser.then { self }).many().map { rest in
@@ -220,29 +230,39 @@ public extension Parser {
         }
     }
 
-    func checkEOF() -> Parser<T> {
-        Parser { input, index in
-
-            guard input.endIndex != index else {
-                throw AnyUnexpectedToken(expected: "not eof", actual: "")
-            }
-            return try self.parse(input, &index)
+    func checkEOF() -> AnyParser<T> {
+        AnyParser { input, index in
         }
     }
 
-    func lexeme() -> Parser<T> {
-        skip(Parser<Character>.character(Character(" ")).or(Parser<Character>.character(Character("\n"))).many())
+    func lexeme() -> AnyParser<T> {
+        skip(AnyParser<Character>.character(Character(" ")).or(AnyParser<Character>.character(Character("\n"))).many())
     }
 }
 
-public extension Parser where T == Character {
+public struct EOFSafeParser<Upstream: Parser>: Parser {
+    public typealias Output = Upstream.Output
+    public let upstream: Upstream
+    public init(upstream: Upstream) {
+        self.upstream = upstream
+    }
+
+    public func parse(_ input: String, _ index: inout String.Index) throws -> Upstream.Output {
+        guard input.endIndex > index else {
+            throw AnyUnexpectedToken(expected: "not eof", actual: "")
+        }
+        return try self.parse(input, &index)
+    }
+}
+
+public extension AnyParser where T == Character {
     struct WrongCharacterError: UnexpectedToken {
         let expected: Character
         var actual: Character
     }
 
-    static func character(_ c: Character) -> Parser<Character> {
-        return Parser<Character> { input, index in
+    static func character(_ c: Character) -> AnyParser<Character> {
+        return AnyParser<Character> { input, index in
 
             guard input[index] == c else {
                 throw WrongCharacterError(expected: c, actual: input[index])
@@ -252,24 +272,34 @@ public extension Parser where T == Character {
         }.checkEOF()
     }
 
-    static func digit() -> Parser<Character> {
-        return Parser<Character>.one(of: "0123456789")
+    static func digit() -> AnyParser<Character> {
+        return AnyParser<Character>.one(of: "0123456789")
     }
 }
 
-public extension Parser where T == String {
-    static func string(_ string: String) -> Parser<String> {
-        Parser<String> { input, index in
+public struct StringParser: Parser {
+    typealias Output = String
+    let string: String
+    public init(string: String) {
+        self.string = string
+    }
 
-            guard let end = input.index(index, offsetBy: string.count, limitedBy: input.endIndex) else {
-                throw AnyUnexpectedToken(expected: string, actual: input)
-            }
+    func parse(_ input: String, _ index: inout String.Index) throws -> String {
+        EOFSafeParser(upstream: AnyParser.always(()))
+        guard let end = input.index(index, offsetBy: string.count, limitedBy: input.endIndex) else {
+            throw AnyUnexpectedToken(expected: string, actual: input)
+        }
 
-            guard String(input[Range(uncheckedBounds: (lower: index, upper: end))]) == string else {
-                throw AnyUnexpectedToken(expected: string, actual: input)
-            }
-            index = end
-            return string
+        guard String(input[Range(uncheckedBounds: (lower: index, upper: end))]) == string else {
+            throw AnyUnexpectedToken(expected: string, actual: input)
+        }
+        index = end
+        return string
+    }
+}
+public extension AnyParser where T == String {
+    static func string(_ string: String) -> AnyParser<String> {
+        AnyParser<String> { input, index in
         }.checkEOF()
     }
 }
