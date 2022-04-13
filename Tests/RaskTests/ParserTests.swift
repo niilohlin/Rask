@@ -1,86 +1,86 @@
 import XCTest
 import Rask
 
-final class ParserTests: XCTestCase {
+final class AnyParserTests: XCTestCase {
     func testParseChar() throws {
-        let charParser = Parser<Character>.character(Character("a"))
+        let charAnyParser = AnyParser<Character>.character(Character("a"))
 
         let inputString = "apa"
         var index = inputString.startIndex
 
-        let parsed = try charParser.parse(inputString, &index)
+        let parsed = try charAnyParser.parse(inputString, &index)
         XCTAssertEqual(parsed, Character("a"))
         XCTAssertEqual(index, inputString.index(inputString.startIndex, offsetBy: 1))
     }
 
-    func testFailingParser() {
-        let charParser = Parser<Character>.character(Character("a"))
+    func testFailingAnyParser() {
+        let charAnyParser = AnyParser<Character>.character(Character("a"))
 
         let inputString = "pa"
         var index = inputString.startIndex
 
-        XCTAssertThrowsError(try charParser.parse(inputString, &index))
+        XCTAssertThrowsError(try charAnyParser.parse(inputString, &index))
         XCTAssertEqual(index, inputString.startIndex)
     }
 
     func testMap() throws {
-        let charParser = Parser<Character>.character(Character("a"))
-        let singleStringParser = charParser.map(String.init)
+        let charAnyParser = AnyParser<Character>.character(Character("a"))
+        let singleStringAnyParser = charAnyParser.map(String.init)
 
         let inputString = "apa"
         var index = inputString.startIndex
 
-        let parsed = try singleStringParser.parse(inputString, &index)
+        let parsed = try singleStringAnyParser.parse(inputString, &index)
         XCTAssertEqual(parsed, "a")
         XCTAssertEqual(index, inputString.index(inputString.startIndex, offsetBy: 1))
     }
 
     func testFlatMap() throws {
-        let charParser = Parser<Character>.character(Character("a"))
-        let abParser = charParser.flatMap { character in
-            Parser<Character>.character(character.nextInAlphabet())
+        let charAnyParser = AnyParser<Character>.character(Character("a"))
+        let abAnyParser = charAnyParser.flatMap { character in
+            AnyParser<Character>.character(character.nextInAlphabet())
         }
 
         let inputString = "aba"
         var index = inputString.startIndex
 
-        let parsed = try abParser.parse(inputString, &index)
+        let parsed = try abAnyParser.parse(inputString, &index)
         XCTAssertEqual(parsed, Character("b"))
         XCTAssertEqual(index, inputString.index(inputString.startIndex, offsetBy: 2))
     }
 
     func testFailingFlatMap() throws {
-        let charParser = Parser<Character>.character(Character("a"))
-        let abParser = charParser.flatMap { character in
-            Parser<Character>.character(character.nextInAlphabet())
+        let charAnyParser = AnyParser<Character>.character(Character("a"))
+        let abAnyParser = charAnyParser.flatMap { character in
+            AnyParser<Character>.character(character.nextInAlphabet())
         }
 
         let inputString = "apa"
         var index = inputString.startIndex
 
-        _ = try? abParser.parse(inputString, &index)
+        _ = try? abAnyParser.parse(inputString, &index)
 
         XCTAssertEqual(inputString, "apa")
         XCTAssertEqual(index, inputString.startIndex)
     }
 
     func testSkip() throws {
-        let charParser = Parser<Character>.character(Character("a")).skip(Parser<Character>.character(Character("p")))
+        let charAnyParser = AnyParser<Character>.character(Character("a")).skip(AnyParser<Character>.character(Character("p")))
 
         let inputString = "apa"
         var index = inputString.startIndex
 
-        let parsed = try charParser.parse(inputString, &index)
+        let parsed = try charAnyParser.parse(inputString, &index)
         XCTAssertEqual(parsed, Character("a"))
         XCTAssertEqual(index, inputString.index(inputString.startIndex, offsetBy: 2))
     }
 
     func testString() throws {
-        XCTAssertEqual(try Parser<String>.string("test").parse(input: "test"), "test")
+        XCTAssertEqual(try Parsers.string("test").parse(input: "test"), "test")
     }
 
     func testManyNonEmpty() throws {
-        let characters = Parser<Character>.one(of: "abc").manyNonEmpty().map { String($0) }
+        let characters = AnyParser<Character>.one(of: "abc").manyNonEmpty().map { String($0) }
         let input = "aaabbcd"
         var index = input.startIndex
         let result = try characters.parse(input, &index)
@@ -89,7 +89,7 @@ final class ParserTests: XCTestCase {
     }
 
     func testManyNonEmpty_failing() throws {
-        let characters = Parser<Character>.one(of: "abc").manyNonEmpty().map { String($0) }
+        let characters = AnyParser<Character>.one(of: "abc").manyNonEmpty().map { String($0) }
         let input = "derp"
         var index = input.startIndex
         XCTAssertThrowsError(try characters.parse(input, &index))
@@ -97,7 +97,7 @@ final class ParserTests: XCTestCase {
     }
 
     func testSeparatedBy() throws {
-        let characters = Parser<Character>.character(Character("a")).separated(by: " ")
+        let characters = AnyParser<Character>.character(Character("a")).separated(by: " ")
         let input = "a a a a"
         var index = input.startIndex
         let result = try characters.parse(input, &index)

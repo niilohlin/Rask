@@ -26,48 +26,50 @@ extension Expr: Equatable {
 }
 
 // lex
-extension Parser {
-    static func number() -> Parser<Int> {
-        Parser<Character>.digit().manyNonEmpty().map { Int(String($0))! }
+extension AnyParser {
+    static func number() -> AnyParser<Int> {
+        AnyParser<Character>.digit().manyNonEmpty().map { Int(String($0))! }.eraseToAnyParser()
     }
 }
 
 // parse
-extension Parser {
-    static func expressionNumber() -> Parser<Expr> {
-        Parser.number().lexeme().map(Expr.number)
+extension AnyParser {
+    static func expressionNumber() -> AnyParser<Expr> {
+        AnyParser.number().lexeme().map(Expr.number).eraseToAnyParser()
     }
 
-    static func term() -> Parser<Expr> {
-        Parser<Expr> { input, index in
-            try expressionNumber().or(parseParens()).or(Parser<Expr>.expressionAdd()).parse(input, &index)
+    static func term() -> AnyParser<Expr> {
+        AnyParser<Expr> { input, index in
+            try expressionNumber().or(parseParens()).or(AnyParser<Expr>.expressionAdd()).parse(input, &index)
         }
     }
 
-    static func expressionAdd() -> Parser<Expr> {
+    static func expressionAdd() -> AnyParser<Expr> {
         term().flatMap { lhs in
-            Parser<Character>.character(Character("+")).lexeme().then {
+            AnyParser<Character>.character(Character("+")).lexeme().then {
                 parseExpression().map { rhs in
                     Expr.add(lhs, rhs)
-                }
+                }.eraseToAnyParser()
             }
-        }
+        }.eraseToAnyParser()
     }
 
-    static func parseParens() -> Parser<Expr> {
-        Parser<Character>.character(Character("(")).lexeme().then {
-            Parser<Expr>.parseExpression().flatMap { number in
-                Parser<Character>.character(Character(")")).lexeme().map { _ in
+    static func parseParens() -> AnyParser<Expr> {
+        AnyParser<Character>.character(Character("(")).lexeme().then {
+            AnyParser<Expr>.parseExpression().flatMap { number in
+                AnyParser<Character>.character(Character(")")).lexeme().map { _ in
                     Expr.parentheses(number)
                 }
-            }
+            }.eraseToAnyParser()
         }
     }
 
-    static func parseExpression() -> Parser<Expr> {
-        term().chainLeft(operator: Parser<Character>.character(Character("+")).lexeme().map { _ in
-            Expr.add
-        })
+    static func parseExpression() -> AnyParser<Expr> {
+        term().chainLeft(
+            operator: AnyParser<Character>.character(Character("+")).lexeme().map { _ in
+                Expr.add
+            }.eraseToAnyParser()
+        )
     }
 }
 
@@ -82,7 +84,7 @@ final class ParseArithmeticTests: XCTestCase {
             ("( 0 ) ", .parentheses(.number(0))),
             ("((0)) ", .parentheses(.parentheses(.number(0))))
         ]
-        try runExample(examples: examples, parser: Parser<Expr>.parseParens())
+        try runExample(examples: examples, parser: AnyParser<Expr>.parseParens())
     }
 
     func testAdd() throws {
@@ -92,10 +94,10 @@ final class ParseArithmeticTests: XCTestCase {
             ("1+ 5 ", .add(.number(1), .number(5))),
             ("1 + 5", .add(.number(1), .number(5)))
         ]
-        try runExample(examples: examples, parser: Parser<Expr>.expressionAdd())
+        try runExample(examples: examples, parser: AnyParser<Expr>.expressionAdd())
     }
 
-    func testParser() throws {
+    func testAnyParser() throws {
         let examples: [(String, Expr)] = [
             ("1", .number(1)),
             ("23", .number(23)),
@@ -106,6 +108,6 @@ final class ParseArithmeticTests: XCTestCase {
             ("1 + 2 + 3", .add(.add(.number(1), .number(2)), .number(3))),
             ("1 + (2 + 3)", .add(.number(1), .parentheses(.add(.number(2), .number(3)))))
         ]
-        try runExample(examples: examples, parser: Parser<Expr>.parseExpression())
+        try runExample(examples: examples, parser: AnyParser<Expr>.parseExpression())
     }
 }
