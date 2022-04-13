@@ -31,3 +31,9 @@ public extension Parsers {
         StringParser(string: string)
     }
 }
+
+extension Parsers.StringParser: ExpressibleByStringLiteral {
+    public init(stringLiteral: StringLiteralType) {
+        self.init(string: stringLiteral)
+    }
+}

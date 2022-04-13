@@ -28,7 +28,7 @@ extension Expr: Equatable {
 // lex
 extension AnyParser {
     static func number() -> AnyParser<Int> {
-        AnyParser<Character>.digit().manyNonEmpty().map { Int(String($0))! }.eraseToAnyParser()
+        Parsers.digit().manyNonEmpty().map { Int(String($0))! }.eraseToAnyParser()
     }
 }
 
@@ -46,7 +46,7 @@ extension AnyParser {
 
     static func expressionAdd() -> AnyParser<Expr> {
         term().flatMap { lhs in
-            AnyParser<Character>.character(Character("+")).lexeme().then {
+            Parsers.character("+").lexeme().then {
                 parseExpression().map { rhs in
                     Expr.add(lhs, rhs)
                 }.eraseToAnyParser()
@@ -55,21 +55,21 @@ extension AnyParser {
     }
 
     static func parseParens() -> AnyParser<Expr> {
-        AnyParser<Character>.character(Character("(")).lexeme().then {
+        Parsers.character("(").lexeme().then {
             AnyParser<Expr>.parseExpression().flatMap { number in
-                AnyParser<Character>.character(Character(")")).lexeme().map { _ in
+                Parsers.character(")").lexeme().map { _ in
                     Expr.parentheses(number)
                 }
-            }.eraseToAnyParser()
-        }
+            }
+        }.eraseToAnyParser()
     }
 
     static func parseExpression() -> AnyParser<Expr> {
         term().chainLeft(
-            operator: AnyParser<Character>.character(Character("+")).lexeme().map { _ in
+            Parsers.character("+").lexeme().map { _ in
                 Expr.add
-            }.eraseToAnyParser()
-        )
+            }
+        ).eraseToAnyParser()
     }
 }
 

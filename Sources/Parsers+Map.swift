@@ -4,7 +4,7 @@ extension Parsers {
     public struct Map<Upstream: Parser, Output>: Parser {
         public let transform: (Upstream.Output) -> Output
         public let upstream: Upstream
-        init(upstream: Upstream, transform: @escaping (Upstream.Output) -> Output) {
+        public init(upstream: Upstream, transform: @escaping (Upstream.Output) -> Output) {
             self.transform = transform
             self.upstream = upstream
         }

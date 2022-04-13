@@ -3,7 +3,7 @@ import Rask
 
 final class AnyParserTests: XCTestCase {
     func testParseChar() throws {
-        let charAnyParser = AnyParser<Character>.character(Character("a"))
+        let charAnyParser = Parsers.character("a")
 
         let inputString = "apa"
         var index = inputString.startIndex
@@ -14,7 +14,7 @@ final class AnyParserTests: XCTestCase {
     }
 
     func testFailingAnyParser() {
-        let charAnyParser = AnyParser<Character>.character(Character("a"))
+        let charAnyParser = Parsers.character("a")
 
         let inputString = "pa"
         var index = inputString.startIndex
@@ -24,7 +24,7 @@ final class AnyParserTests: XCTestCase {
     }
 
     func testMap() throws {
-        let charAnyParser = AnyParser<Character>.character(Character("a"))
+        let charAnyParser = Parsers.character("a")
         let singleStringAnyParser = charAnyParser.map(String.init)
 
         let inputString = "apa"
@@ -36,9 +36,9 @@ final class AnyParserTests: XCTestCase {
     }
 
     func testFlatMap() throws {
-        let charAnyParser = AnyParser<Character>.character(Character("a"))
+        let charAnyParser = Parsers.character("a")
         let abAnyParser = charAnyParser.flatMap { character in
-            AnyParser<Character>.character(character.nextInAlphabet())
+            Parsers.character(character.nextInAlphabet())
         }
 
         let inputString = "aba"
@@ -50,9 +50,9 @@ final class AnyParserTests: XCTestCase {
     }
 
     func testFailingFlatMap() throws {
-        let charAnyParser = AnyParser<Character>.character(Character("a"))
+        let charAnyParser = Parsers.character("a")
         let abAnyParser = charAnyParser.flatMap { character in
-            AnyParser<Character>.character(character.nextInAlphabet())
+            Parsers.character(character.nextInAlphabet())
         }
 
         let inputString = "apa"
@@ -65,7 +65,7 @@ final class AnyParserTests: XCTestCase {
     }
 
     func testSkip() throws {
-        let charAnyParser = AnyParser<Character>.character(Character("a")).skip(AnyParser<Character>.character(Character("p")))
+        let charAnyParser = Parsers.character("a").skip(Parsers.character("p"))
 
         let inputString = "apa"
         var index = inputString.startIndex
@@ -80,7 +80,7 @@ final class AnyParserTests: XCTestCase {
     }
 
     func testManyNonEmpty() throws {
-        let characters = AnyParser<Character>.one(of: "abc").manyNonEmpty().map { String($0) }
+        let characters = Parsers.one(of: "abc").manyNonEmpty().map { String($0) }
         let input = "aaabbcd"
         var index = input.startIndex
         let result = try characters.parse(input, &index)
@@ -89,7 +89,7 @@ final class AnyParserTests: XCTestCase {
     }
 
     func testManyNonEmpty_failing() throws {
-        let characters = AnyParser<Character>.one(of: "abc").manyNonEmpty().map { String($0) }
+        let characters = Parsers.one(of: "abc").manyNonEmpty().map { String($0) }
         let input = "derp"
         var index = input.startIndex
         XCTAssertThrowsError(try characters.parse(input, &index))
@@ -97,7 +97,7 @@ final class AnyParserTests: XCTestCase {
     }
 
     func testSeparatedBy() throws {
-        let characters = AnyParser<Character>.character(Character("a")).separated(by: " ")
+        let characters = Parsers.character("a").separated(by: " ")
         let input = "a a a a"
         var index = input.startIndex
         let result = try characters.parse(input, &index)
