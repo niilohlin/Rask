@@ -1,24 +1,25 @@
 
 public protocol Parser {
     associatedtype Output
-    func parse(_ input: String, _ index: inout String.Index) throws -> Output
+    associatedtype Input: Collection
+    func parse(_ input: Input, _ index: inout Input.Index) throws -> Output
 }
 
 
-public struct AnyParser<T>: Parser {
+public struct AnyParser<Input: Collection, T>: Parser {
     public typealias Output = T
-    private let parseClosure: (String, inout String.Index) throws -> T
-    public init(_ parse: @escaping (String, inout String.Index) throws -> T) {
+    private let parseClosure: (Input, inout Input.Index) throws -> T
+    public init(_ parse: @escaping (Input, inout Input.Index) throws -> T) {
         self.parseClosure = parse
     }
 
-    public func parse(_ str: String, _ index: inout String.Index) throws -> T {
+    public func parse(_ str: Input, _ index: inout Input.Index) throws -> T {
         try parseClosure(str, &index)
     }
 }
 
 public extension Parser {
-    func eraseToAnyParser() -> AnyParser<Output> {
+    func eraseToAnyParser() -> AnyParser<Input, Output> {
         AnyParser(parse(_:_:))
     }
 }
@@ -39,11 +40,11 @@ struct AnyUnexpectedToken<ExpectedToken>: UnexpectedToken {
 public extension AnyParser {
     struct FailingAnyParser: Error {
     }
-    static func failingAnyParser<T>(_ type: T.Type) -> AnyParser<T> {
-        AnyParser<T> { _, _ in
-            throw FailingAnyParser()
-        }
-    }
+//    static func failingAnyParser<T>(_ type: T.Type) -> AnyParser<T> {
+//        AnyParser<T> { _, _ in
+//            throw FailingAnyParser()
+//        }
+//    }
 }
 
 struct OrError: UnexpectedToken {

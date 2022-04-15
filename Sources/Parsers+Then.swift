@@ -1,7 +1,7 @@
 import Foundation
 
 extension Parsers {
-    public struct Then<Upstream: Parser, Downstream: Parser>: Parser {
+    public struct Then<Upstream: Parser, Downstream: Parser>: Parser where Upstream.Input == Downstream.Input {
         public let transform: () -> Downstream
         public let upstream: Upstream
 
@@ -10,7 +10,7 @@ extension Parsers {
             self.upstream = upstream
         }
 
-        public func parse(_ input: String, _ index: inout String.Index) throws -> Downstream.Output {
+        public func parse(_ input: Upstream.Input, _ index: inout Upstream.Input.Index) throws -> Downstream.Output {
             var temp = index
             _ = try upstream.parse(input, &temp)
             let newParser = transform()

@@ -1,8 +1,9 @@
 import Foundation
 
 extension Parsers {
-    public struct Or<LUpstream: Parser, RUpstream: Parser>: Parser where LUpstream.Output == RUpstream.Output {
-        public typealias Output = LUpstream.Output
+    public struct Or<LUpstream: Parser, RUpstream: Parser>: Parser where LUpstream.Input == RUpstream.Input,
+                                                                         LUpstream.Output == RUpstream.Output {
+        public typealias Output = RUpstream.Output
 
         public let lUpstream: LUpstream
         public let rUpstream: RUpstream
@@ -11,7 +12,7 @@ extension Parsers {
             self.rUpstream = rUpstream
         }
 
-        public func parse(_ input: String, _ index: inout String.Index) throws -> Output {
+        public func parse(_ input: LUpstream.Input, _ index: inout RUpstream.Input.Index) throws -> Output {
             let oldIndex = index
             var firstError: Error?
             do {
@@ -27,17 +28,14 @@ extension Parsers {
 //                print("\(input)")
 //                print(String(repeating: " ", count: oldIndex.utf16Offset(in: input)) + "^")
                 let expectedText = "\(String(describing: LUpstream.self)) or \(String(describing: RUpstream.self))"
-                if oldIndex >= input.endIndex {
-                    throw OrError(expected: expectedText, actual: "\(input[input.index(before: input.endIndex)])")
-                }
-                throw OrError(expected: expectedText, actual: "\(input[oldIndex])")
+                throw OrError(expected: expectedText, actual: "\(input[input.index(oldIndex, offsetBy: 0, limitedBy: input.endIndex) ?? input.endIndex])")
             }
         }
     }
 }
 
 extension Parser {
-    public func or<Other: Parser>(_ other: Other) -> Parsers.Or<Self, Other> where Self.Output == Other.Output {
+    public func or<Other: Parser>(_ other: Other) -> Parsers.Or<Self, Other> where Self.Output == Other.Output, Self.Input == Other.Input {
         Parsers.Or(lUpstream: self, rUpstream: other)
     }
 }

@@ -27,24 +27,24 @@ extension Expr: Equatable {
 
 // lex
 extension AnyParser {
-    static func number() -> AnyParser<Int> {
+    static func number() -> StringParser<Int> {
         Parsers.digit().manyNonEmpty().map { Int(String($0))! }.eraseToAnyParser()
     }
 }
 
 // parse
 extension AnyParser {
-    static func expressionNumber() -> AnyParser<Expr> {
+    static func expressionNumber() -> StringParser<Expr> {
         AnyParser.number().lexeme().map(Expr.number).eraseToAnyParser()
     }
 
-    static func term() -> AnyParser<Expr> {
-        AnyParser<Expr> { input, index in
-            try expressionNumber().or(parseParens()).or(AnyParser<Expr>.expressionAdd()).parse(input, &index)
+    static func term() -> StringParser<Expr> {
+        StringParser<Expr> { input, index in
+            try expressionNumber().or(parseParens()).or(StringParser<Expr>.expressionAdd()).parse(input, &index)
         }
     }
 
-    static func expressionAdd() -> AnyParser<Expr> {
+    static func expressionAdd() -> StringParser<Expr> {
         term().flatMap { lhs in
             Parsers.character("+").lexeme().then {
                 parseExpression().map { rhs in
@@ -54,9 +54,9 @@ extension AnyParser {
         }.eraseToAnyParser()
     }
 
-    static func parseParens() -> AnyParser<Expr> {
+    static func parseParens() -> StringParser<Expr> {
         Parsers.character("(").lexeme().then {
-            AnyParser<Expr>.parseExpression().flatMap { number in
+            StringParser<Expr>.parseExpression().flatMap { number in
                 Parsers.character(")").lexeme().map { _ in
                     Expr.parentheses(number)
                 }
@@ -64,7 +64,7 @@ extension AnyParser {
         }.eraseToAnyParser()
     }
 
-    static func parseExpression() -> AnyParser<Expr> {
+    static func parseExpression() -> StringParser<Expr> {
         term().chainLeft(
             Parsers.character("+").lexeme().map { _ in
                 Expr.add
@@ -84,7 +84,7 @@ final class ParseArithmeticTests: XCTestCase {
             ("( 0 ) ", .parentheses(.number(0))),
             ("((0)) ", .parentheses(.parentheses(.number(0))))
         ]
-        try runExample(examples: examples, parser: AnyParser<Expr>.parseParens())
+        try runExample(examples: examples, parser: StringParser<Expr>.parseParens())
     }
 
     func testAdd() throws {
@@ -94,7 +94,7 @@ final class ParseArithmeticTests: XCTestCase {
             ("1+ 5 ", .add(.number(1), .number(5))),
             ("1 + 5", .add(.number(1), .number(5)))
         ]
-        try runExample(examples: examples, parser: AnyParser<Expr>.expressionAdd())
+        try runExample(examples: examples, parser: StringParser<Expr>.expressionAdd())
     }
 
     func testAnyParser() throws {
@@ -108,6 +108,6 @@ final class ParseArithmeticTests: XCTestCase {
             ("1 + 2 + 3", .add(.add(.number(1), .number(2)), .number(3))),
             ("1 + (2 + 3)", .add(.number(1), .parentheses(.add(.number(2), .number(3)))))
         ]
-        try runExample(examples: examples, parser: AnyParser<Expr>.parseExpression())
+        try runExample(examples: examples, parser: StringParser<Expr>.parseExpression())
     }
 }

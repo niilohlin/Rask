@@ -2,14 +2,16 @@ import Foundation
 import XCTest
 import Rask
 
-extension AnyParser where T == [String: Any] {
-    static func null() -> AnyParser<Any?> {
+typealias StringParser<T> = AnyParser<String, T>
+
+extension AnyParser where Input == String, T == [String: Any] {
+    static func null() -> StringParser<Any?> {
         Parsers.string("null").lexeme().map { _ in nil }.eraseToAnyParser()
     }
 
-    static func jsonNumber() -> AnyParser<Double> {
-        Parsers.one(of: "01234567890-.").manyNonEmpty().lexeme().flatMap { (chars) -> AnyParser<Double> in
-            return AnyParser<Double> { _, _ in
+    static func jsonNumber() -> StringParser<Double> {
+        Parsers.one(of: "01234567890-.").manyNonEmpty().lexeme().flatMap { (chars) -> StringParser<Double> in
+            return StringParser<Double> { _, _ in
                 guard let double = Double(String(chars)) else {
                     throw NSError(domain: "not a double", code: 0, userInfo: [:])
                 }
@@ -18,15 +20,15 @@ extension AnyParser where T == [String: Any] {
         }.backtrack().eraseToAnyParser()
     }
 
-    static func bool() -> AnyParser<Bool> {
+    static func bool() -> StringParser<Bool> {
         Parsers.string("true").or(Parsers.string("false")).map { bool in
             bool == "true"
         }.lexeme().backtrack().eraseToAnyParser()
     }
 
-    static func jsonString() -> AnyParser<String> {
+    static func jsonString() -> StringParser<String> {
         Parsers.one(of: "\"'").flatMap { openCharacter in
-            AnyParser<String> { input, index in
+            StringParser<String> { input, index in
                 var result = ""
                 while input[index] != openCharacter {
                     let char = input[index]
@@ -42,7 +44,7 @@ extension AnyParser where T == [String: Any] {
         }.backtrack().lexeme().eraseToAnyParser()
     }
 
-    static func jsonValue() -> AnyParser<Any> {
+    static func jsonValue() -> StringParser<Any> {
         return jsonString().map { $0 as Any }
             .or(jsonNumber().map { $0 as Any })
             .or(bool().map { $0 as Any })
@@ -51,13 +53,13 @@ extension AnyParser where T == [String: Any] {
             .eraseToAnyParser()
     }
 
-    static func jsonArray() -> AnyParser<[Any]> {
+    static func jsonArray() -> StringParser<[Any]> {
         Parsers.character("[").lexeme().then {
             jsonValue().separated(by: comma).skip(Parsers.character("]")).lexeme()
         }.backtrack().eraseToAnyParser()
     }
 
-    static func keyValuePair() -> AnyParser<(String, Any)> {
+    static func keyValuePair() -> StringParser<(String, Any)> {
         jsonString().flatMap { key in
             Parsers.character(Character(":")).lexeme().flatMap { _ in
                 jsonValue().map { value in
@@ -69,7 +71,7 @@ extension AnyParser where T == [String: Any] {
 
     static let comma = Parsers.character(",").lexeme().toVoid().eraseToAnyParser()
 
-    static func object() -> AnyParser<[String: Any]> {
+    static func object() -> StringParser<[String: Any]> {
         Parsers.character("{").lexeme().then {
             keyValuePair().separated(by: comma).skip(Parsers.character("}").lexeme())
         }.map(Dictionary.init(uniqueKeysWithValues:)).backtrack().eraseToAnyParser()
@@ -86,7 +88,7 @@ final class JSONParesrTests: XCTestCase {
             ("-5.0", -5),
             ("5.", 5)
         ]
-        try runExample(examples: examples, parser: AnyParser<[String: Any]>.jsonNumber())
+        try runExample(examples: examples, parser: StringParser<[String: Any]>.jsonNumber())
     }
 
     func testString() throws {
@@ -96,7 +98,7 @@ final class JSONParesrTests: XCTestCase {
             ("\"\\\"test\"", "\"test"),
             ("'test'", "test")
         ]
-        try runExample(examples: examples, parser: AnyParser<[String: Any]>.jsonString())
+        try runExample(examples: examples, parser: StringParser<[String: Any]>.jsonString())
     }
 
     func testJsonObject() throws {
@@ -105,14 +107,14 @@ final class JSONParesrTests: XCTestCase {
             ("{\"a\": 5}", ["a": 5.0]),
             ("{\"a\": 5, \"b\": 7}", ["a": 5.0, "b": 7])
         ]
-        try runExample(examples: examples, parser: AnyParser<[String: Any]>.object().map { $0 as! [String: Double] }.eraseToAnyParser())
+        try runExample(examples: examples, parser: StringParser<[String: Any]>.object().map { $0 as! [String: Double] }.eraseToAnyParser())
     }
 
     func testComplexObject() throws {
         let input = "{\"a\": {}, \"b\": [{\"c\": []}]}"
         var index = input.startIndex
         let expected: [String: Any] = ["a": [:], "b": ["c": []]]
-        let parser = AnyParser<[String: Any]>.object()
+        let parser = StringParser<[String: Any]>.object()
 
         XCTAssertNoThrow(try parser.parse(input, &index))
 
@@ -122,7 +124,7 @@ final class JSONParesrTests: XCTestCase {
     func testMassive() throws {
         let input = massiveJson
         var index = input.startIndex
-        let parser = AnyParser<[String: Any]>.object()
+        let parser = StringParser<[String: Any]>.object()
 
         XCTAssertNoThrow(try parser.parse(input, &index))
 

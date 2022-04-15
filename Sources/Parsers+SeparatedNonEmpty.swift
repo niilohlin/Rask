@@ -1,7 +1,7 @@
 import Foundation
 
 extension Parsers {
-    public struct SeparatedNonEmpty<Upstream: Parser, Separator: Parser>: Parser {
+    public struct SeparatedNonEmpty<Upstream: Parser, Separator: Parser>: Parser where Upstream.Input == Separator.Input {
         public let upstream: Upstream
         public let separator: Separator
 
@@ -10,7 +10,7 @@ extension Parsers {
             self.separator = separator
         }
 
-        public func parse(_ input: String, _ index: inout String.Index) throws -> [Upstream.Output] {
+        public func parse(_ input: Upstream.Input, _ index: inout Upstream.Input.Index) throws -> [Upstream.Output] {
             try upstream.flatMap { firstMatch in
                 (separator.then { upstream }).many().map { rest in
                     [firstMatch] + rest

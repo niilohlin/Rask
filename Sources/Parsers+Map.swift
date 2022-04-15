@@ -9,7 +9,7 @@ extension Parsers {
             self.upstream = upstream
         }
 
-        public func parse(_ input: String, _ index: inout String.Index) throws -> Output {
+        public func parse(_ input: Upstream.Input, _ index: inout Upstream.Input.Index) throws -> Output {
             let result = try upstream.parse(input, &index)
             return transform(result)
         }

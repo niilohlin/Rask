@@ -2,7 +2,7 @@ import Foundation
 import XCTest
 import Rask
 
-extension Parser {
+extension Parser where Input == String {
     func parse(input: String) throws -> Output {
         let input = input
         var index = input.startIndex
@@ -11,7 +11,7 @@ extension Parser {
 }
 
 extension XCTestCase {
-    func runExample<T: Equatable>(examples: [(String, T)], parser: AnyParser<T>, file: StaticString = #file, line: UInt = #line) throws {
+    func runExample<T: Equatable>(examples: [(String, T)], parser: AnyParser<String, T>, file: StaticString = #file, line: UInt = #line) throws {
         for (input, expected) in examples {
             let input = input
             var index = input.startIndex

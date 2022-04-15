@@ -1,7 +1,8 @@
 import Foundation
 
 extension Parsers {
-    public struct ChainLeft<Upstream: Parser, Operator: Parser>: Parser where Operator.Output == ((Upstream.Output, Upstream.Output) -> Upstream.Output) {
+    public struct ChainLeft<Upstream: Parser, Operator: Parser>: Parser where
+    Operator.Output == ((Upstream.Output, Upstream.Output) -> Upstream.Output), Upstream.Input == Operator.Input {
         public let `operator`: Operator
         public let upstream: Upstream
         public init(upstream: Upstream, `operator`: Operator) {
@@ -9,10 +10,10 @@ extension Parsers {
             self.operator = `operator`
         }
 
-        public func parse(_ input: String, _ index: inout String.Index) throws -> Upstream.Output {
-            func chain(lhs: Output) -> AnyParser<Output> {
+        public func parse(_ input: Upstream.Input, _ index: inout Upstream.Input.Index) throws -> Upstream.Output {
+            func chain(lhs: Output) -> AnyParser<Upstream.Input, Output> {
                 `operator`.flatMap { makeOperator in
-                    upstream.flatMap { rhs -> AnyParser<Output> in
+                    upstream.flatMap { rhs -> AnyParser<Upstream.Input, Output> in
                         let result = makeOperator(lhs, rhs)
                         return chain(lhs: result)
                     }
